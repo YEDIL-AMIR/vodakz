@@ -1,300 +1,272 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Карта водных ресурсов Казахстана</title>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-/* Базовые переменные и дизайн в стиле Apple Dark Mode */
-:root {
-    --bg-main: #141416;
-    --bg-card: #222227;
-    --text-main: #ffffff;
-    --text-muted: #a0a0ab;
-    --gradient-brand: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
-    --input-bg: #1a1a1f;
-    --border-color: #33333a;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Карта водных ресурсов Казахстана</title>
     
-    --status-green: #22c55e;
-    --status-yellow: #eab308;
-    --status-red: #ef4444;
-    --status-blue: #3b82f6;
-}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* Базовые переменные и дизайн в стиле Apple Dark Mode */
+        :root {
+            --bg-main: #141416;
+            --bg-card: #222227;
+            --text-main: #ffffff;
+            --text-muted: #a0a0ab;
+            --gradient-brand: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            --input-bg: #1a1a1f;
+            --border-color: #33333a;
+            
+            /* Цвета статусов */
+            --status-green: #22c55e;
+            --status-yellow: #eab308;
+            --status-red: #ef4444;
+            --status-blue: #3b82f6;
+        }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-    background: var(--bg-main);
-    color: var(--text-main);
-    -webkit-font-smoothing: antialiased;
-}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background: var(--bg-main);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
 
-header {
-    background: rgba(20, 20, 22, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    padding: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-}
+        /* Навигация / Шапка */
+        header {
+            background: rgba(20, 20, 22, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-header h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 800;
-    background: var(--gradient-brand);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-.auth-btn {
-    background: transparent;
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s;
-}
+        .auth-btn {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
 
-.auth-btn:hover { background: var(--bg-card); }
+        .auth-btn:hover { background: var(--bg-card); }
 
-main { max-width: 1200px; margin: auto; padding: 20px; }
+        main { max-width: 1200px; margin: auto; padding: 20px; }
 
-#map {
-    height: 500px;
-    border-radius: 24px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-color);
-    z-index: 1;
-    background: var(--bg-card); /* Фикс черного квадрата при загрузке */
-}
+        /* Карта */
+        #map {
+            height: 500px;
+            border-radius: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            z-index: 1;
+        }
+        
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
 
-.leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
-    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-}
+        /* Панель фильтров и поиска */
+        .controls-panel {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
 
-.controls-panel {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-}
+        #search {
+            flex-grow: 1;
+            min-width: 250px;
+            padding: 14px 20px;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: white;
+            font-size: 16px;
+        }
 
-#search {
-    flex-grow: 1;
-    min-width: 250px;
-    padding: 14px 20px;
-    border-radius: 50px;
-    border: 1px solid var(--border-color);
-    background: var(--input-bg);
-    color: white;
-    font-size: 16px;
-}
+        .filter-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
 
-.filter-btn {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    padding: 10px 20px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s;
-}
+        .filter-btn.active {
+            background: var(--text-main);
+            color: var(--bg-main);
+        }
 
-.filter-btn.active {
-    background: var(--text-main);
-    color: var(--bg-main);
-}
+        /* Сетка карточек источников */
+        #list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
 
-#list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
-}
+        .card {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
 
-.card {
-    background: var(--bg-card);
-    padding: 24px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-}
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
 
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-}
+        .card h3 { margin: 0; font-size: 20px; }
+        .card p { margin: 5px 0; color: var(--text-muted); font-size: 14px; }
+        .card .lab-data { background: #1a1a1f; padding: 12px; border-radius: 12px; margin-top: 15px; font-size: 13px;}
+        .card .lab-data div { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 4px;}
 
-.card h3 { margin: 0; font-size: 20px; }
-.card p { margin: 5px 0; color: var(--text-muted); font-size: 14px; }
-.card .lab-data { background: #1a1a1f; padding: 12px; border-radius: 12px; margin-top: 15px; font-size: 13px;}
-.card .lab-data div { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 4px;}
+        /* Статусы (Бейджи) */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .bg-green { background: var(--status-green); }
+        .bg-yellow { background: var(--status-yellow); color: #000; }
+        .bg-red { background: var(--status-red); }
+        .bg-blue { background: var(--status-blue); }
 
-.badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #fff;
-}
-.bg-green { background: var(--status-green); }
-.bg-yellow { background: var(--status-yellow); color: #000; }
-.bg-red { background: var(--status-red); }
-.bg-blue { background: var(--status-blue); }
+        /* Кастомные маркеры для Leaflet */
+        .custom-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
 
-.custom-marker {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-}
+        /* Информационные секции */
+        .info-section {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
 
-.info-section {
-    background: var(--bg-card);
-    padding: 30px;
-    border-radius: 24px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-color);
-}
+        .info-section h2 { margin-top: 0; }
+        .donate-btn {
+            background: #f14635; /* Kaspi red */
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
 
-.info-section h2 { margin-top: 0; }
-.donate-btn {
-    background: #f14635;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 16px;
-    margin-top: 15px;
-}
+        /* Попап карты */
+        .leaflet-popup-content-wrapper { background: var(--bg-card) !important; color: white !important; }
+        .leaflet-popup-tip { background: var(--bg-card) !important; }
 
-.leaflet-popup-content-wrapper { background: var(--bg-card) !important; color: white !important; }
-.leaflet-popup-tip { background: var(--bg-card) !important; }
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
 
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
+        .modal-content {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid var(--border-color);
+        }
 
-.modal-content {
-    background: var(--bg-card);
-    padding: 30px;
-    border-radius: 24px;
-    width: 90%;
-    max-width: 400px;
-    border: 1px solid var(--border-color);
-}
+        .modal-content h2 { margin-top: 0; font-size: 20px; }
 
-.modal-content h2 { margin-top: 0; font-size: 22px; text-align: center; margin-bottom: 20px; }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
 
-.modal-content input {
-    width: 100%;
-    padding: 12px 16px;
-    margin-bottom: 15px;
-    background: var(--input-bg);
-    border: 1px solid var(--border-color);
-    color: white;
-    border-radius: 12px;
-    box-sizing: border-box;
-    font-size: 14px;
-}
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
 
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 10px;
-}
+        .modal-actions button {
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
 
-.modal-actions button, .google-btn, .email-submit-btn {
-    padding: 12px 20px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-}
+        .cancel-btn {
+            background: var(--bg-main);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
 
-.cancel-btn {
-    background: var(--bg-main);
-    color: var(--text-muted);
-    border: 1px solid var(--border-color);
-}
-
-.submit-btn, .email-submit-btn {
-    background: var(--status-blue);
-    color: white;
-}
-
-.divider {
-    text-align: center;
-    margin: 16px 0;
-    color: var(--text-muted);
-    font-size: 14px;
-    position: relative;
-}
-.divider::before, .divider::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background: var(--border-color);
-}
-.divider::before { left: 0; }
-.divider::after { right: 0; }
-
-.google-btn {
-    width: 100%;
-    background: #ffffff;
-    color: #141416;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: background 0.2s;
-}
-.google-btn:hover { background: #e4e4e7; }
-.email-submit-btn { width: 100%; }
-.email-submit-btn:disabled { background: #33333a; color: #71717a; cursor: not-allowed; }
-</style>
+        .submit-btn {
+            background: var(--status-blue);
+            color: white;
+        }
+    </style>
 </head>
 <body>
 
 <header>
     <h1>Живая Вода РК</h1>
-    <button class="auth-btn" id="headerAuthBtn">Войти (Google/Telegram)</button>
+    <button class="auth-btn">Войти (Google/Telegram)</button>
 </header>
 
 <main>
@@ -320,17 +292,17 @@ main { max-width: 1200px; margin: auto; padding: 20px; }
     </div>
 
     <div class="info-section">
-        <h2>Команда исследовательского проекта</h2>
-        <p>Команда студентов Международного университета информационных технологий, участвовавшая в разработке и исследовании водных ресурсов Казахстана.</p>
+        <h2>56 исследователей проекта</h2>
+        <p>Студенты и волонтеры, которые помогли собрать образцы воды со всего Казахстана.</p>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
-            <div class="card" style="padding: 15px;"><b>Едил Амир</b><br><span style="color:#a0a0ab; font-size: 12px;">Лидер проекта • Координация исследований</span></div>
-            <div class="card" style="padding: 15px;"><b>Елеусин Берекет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Сбор данных</span></div>
-            <div class="card" style="padding: 15px;"><b>Самен Асхат</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Анализ источников</span></div>
-            <div class="card" style="padding: 15px;"><b>Демекулов Бауыржан</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Картографирование</span></div>
-            <div class="card" style="padding: 15px;"><b>Галымбек Адилет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Обработка данных</span></div>
-            <div class="card" style="padding: 15px;"><b>Калитай Нурасыл</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Полевые исследования</span></div>
-            <div class="card" style="padding: 15px;"><b>Дархан Адилет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Тестирование системы</span></div>
-            <div class="card" style="padding: 15px;"><b>Ералы Адилет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки • Подготовка отчётов</span></div>
+            <div class="card" style="padding: 15px;"><b>Лидер: Едил Амир</b><br><span style="color:#a0a0ab; font-size: 12px;">Руководитель проекта</span></div>
+            <div class="card" style="padding: 15px;"><b>Елеусин Берекет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Самен Асхат</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Демекулов Бауыржан</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Галымбек Адилет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Калитай Нурасыл</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Дархан Адлет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
+            <div class="card" style="padding: 15px;"><b>Ералы Адлет</b><br><span style="color:#a0a0ab; font-size: 12px;">Участник разработки</span></div>
         </div>
     </div>
 
@@ -338,12 +310,12 @@ main { max-width: 1200px; margin: auto; padding: 20px; }
         <div class="modal-content">
             <h2>Добавить новый родник</h2>
             <form id="addSpringForm">
-                <input type="text" name="m_name" placeholder="Название (например, Ак-Булак)" required>
-                <input type="text" name="m_region" placeholder="Регион (например, Алматинская обл.)" required>
-                <input type="text" name="m_type" placeholder="Тип (например, Горный источник)" required>
-                <input type="number" name="m_lat" step="0.000001" placeholder="Широта (например, 43.2389)" required>
-                <input type="number" name="m_lng" step="0.000001" placeholder="Долгота (например, 76.8897)" required>
-                <input type="text" name="m_researcher" placeholder="Ваше Имя (Исследователь)" required>
+                <input type="text" id="m_name" placeholder="Название (например, Ак-Булак)" required="">
+                <input type="text" id="m_region" placeholder="Регион (например, Алматинская обл.)" required="">
+                <input type="text" id="m_type" placeholder="Тип (например, Горный источник)" required="">
+                <input type="number" id="m_lat" step="0.000001" placeholder="Широта (например, 43.2389)" required="">
+                <input type="number" id="m_lng" step="0.000001" placeholder="Долгота (например, 76.8897)" required="">
+                <input type="text" id="m_researcher" placeholder="Ваше Имя (Исследователь)" required="">
                 <div class="modal-actions">
                     <button type="button" id="closeModalBtn" class="cancel-btn">Отмена</button>
                     <button type="submit" class="submit-btn">Добавить</button>
@@ -351,72 +323,46 @@ main { max-width: 1200px; margin: auto; padding: 20px; }
             </form>
         </div>
     </div>
-
-    <div id="authModal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Авторизация</h2>
-            <form id="reactAuthForm">
-                <input type="email" id="authEmailInput" name="email" placeholder="Ваш Email" required>
-                <button type="submit" class="email-submit-btn" id="emailSubmitBtn">Войти через Email</button>
-            </form>
-            <div class="divider">или</div>
-            <button type="button" class="google-btn" id="googleAuthBtn">
-                <svg style="width:18px; height:18px;" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5.04c1.65 0 3.13.57 4.3 1.69l3.22-3.22C17.56 1.63 14.97 1 12 1 7.35 1 3.41 3.67 1.48 7.56l3.82 2.96c.9-2.7 3.42-4.48 6.7-4.48z"/><path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.43h6.44c-.28 1.47-1.11 2.71-2.36 3.55l3.67 2.84c2.15-1.98 3.39-4.9 3.39-8.48z"/><path fill="#FBBC05" d="M5.3 14.48c-.23-.69-.36-1.42-.36-2.18s.13-1.49.36-2.18L1.48 7.56C.54 9.45 0 11.57 0 13.8s.54 4.35 1.48 6.24l3.82-2.96z"/><path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.67-2.84c-1.1.74-2.51 1.18-4.29 1.18-3.28 0-6.07-2.18-7.06-5.12L1.12 16.2C3.05 20.13 7.08 23 12 23z"/></svg>
-                Войти через Google
-            </button>
-            <div class="modal-actions">
-                <button type="button" id="closeAuthModalBtn" class="cancel-btn" style="width: 100%;">Закрыть</button>
-            </div>
-        </div>
-    </div>
 </main>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-/**
- * ОПТИМИЗАЦИЯ 1: Безопасность (Защита от XSS)
- * Функция экранирования HTML-тегов, чтобы предотвратить внедрение вредоносного кода при добавлении родника.
- */
-const escapeHTML = (str) => {
-    if (!str) return '';
-    return str.replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag]));
-};
-
-/**
- * ОПТИМИЗАЦИЯ 2: Производительность (Debounce)
- * Предотвращает множественный вызов функции фильтрации при быстром наборе текста.
- */
-const debounce = (func, wait) => {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-};
-
-// --- ИНИЦИАЛИЗАЦИЯ SUPABASE (НОВЫЕ КЛЮЧИ) ---
-const supabaseUrl = 'https://ruufnctrimvyiakmohdb.supabase.co';
-const supabaseKey = 'sb_publishable_OKaW99uT-sCy51HvDymzzw_agJ02m_7';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-// --- ИНИЦИАЛИЗАЦИЯ ДАННЫХ ---
+// База данных
 const defaultSprings = [
-    { id: 1, name: "Ак-Булак", region: "Алматинская область", type: "Горный источник", lat: 43.2389, lng: 76.8897, status: "green", statusText: "Подходит для электролиза", researcher: "Алиев Руслан", date: "12.05.2023", lab: { ph: "7.2", min: "150 мг/л", cond: "300 мкСм/см", hard: "2.1 мг-экв/л", temp: "8°C", imp: "Нет" } },
-    { id: 2, name: "Сары-Агаш скважина №4", region: "Туркестанская область", type: "Минеральный источник", lat: 41.455, lng: 69.166, status: "red", statusText: "Не рекомендуется", researcher: "Сапарова Дина", date: "04.08.2023", lab: { ph: "8.5", min: "1200 мг/л", cond: "1500 мкСм/см", hard: "6.5 мг-экв/л", temp: "42°C", imp: "Сульфаты" } },
-    { id: 3, name: "Кара-Булак", region: "Жетысу", type: "Родник", lat: 45.015, lng: 78.373, status: "yellow", statusText: "Данные проверяются", researcher: "Иванов Алексей", date: "Недавний", lab: null },
-    { id: 4, name: "Алма-Арасан", region: "Алматинская область", type: "Термальный", lat: 43.083, lng: 76.901, status: "blue", statusText: "Лабораторное исследование выполнено", researcher: "Калиев Е.", date: "15.09.2023", lab: { ph: "7.8", min: "400 мг/л", cond: "600 мкСм/см", hard: "3.2 мг-экв/л", temp: "35°C", imp: "Радон" } }
+    {
+        id: 1, name: "Ак-Булак", region: "Алматинская область", type: "Горный источник",
+        lat: 43.2389, lng: 76.8897, status: "green", statusText: "Подходит для электролиза",
+        researcher: "Алиев Руслан", date: "12.05.2023",
+        lab: { ph: "7.2", min: "150 мг/л", cond: "300 мкСм/см", hard: "2.1 мг-экв/л", temp: "8°C", imp: "Нет" }
+    },
+    {
+        id: 2, name: "Сары-Агаш скважина №4", region: "Туркестанская область", type: "Минеральный источник",
+        lat: 41.455, lng: 69.166, status: "red", statusText: "Не рекомендуется",
+        researcher: "Сапарова Дина", date: "04.08.2023",
+        lab: { ph: "8.5", min: "1200 мг/л", cond: "1500 мкСм/см", hard: "6.5 мг-экв/л", temp: "42°C", imp: "Сульфаты" }
+    },
+    {
+        id: 3, name: "Кара-Булак", region: "Жетысу", type: "Родник",
+        lat: 45.015, lng: 78.373, status: "yellow", statusText: "Данные проверяются",
+        researcher: "Иванов Алексей", date: "Недавний",
+        lab: null
+    },
+    {
+        id: 4, name: "Алма-Арасан", region: "Алматинская область", type: "Термальный",
+        lat: 43.083, lng: 76.901, status: "blue", statusText: "Лабораторное исследование выполнено",
+        researcher: "Калиев Е.", date: "15.09.2023",
+        lab: { ph: "7.8", min: "400 мг/л", cond: "600 мкСм/см", hard: "3.2 мг-экв/л", temp: "35°C", imp: "Радон" }
+    }
 ];
 
-let springs = [];
-let currentFilter = 'all';
-let searchQuery = '';
-let markersLayer = L.layerGroup(); // ОПТИМИЗАЦИЯ 3: Использование LayerGroup для карты
+let springs = JSON.parse(localStorage.getItem('kz_springs_db')) || defaultSprings;
 
-// --- ИНИЦИАЛИЗАЦИЯ КАРТЫ ---
+// Инициализация карты
 const map = L.map('map').setView([48, 67], 5);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-markersLayer.addTo(map);
+
+let markers = [];
 
 const getMarkerIcon = (color) => {
     const hexMap = { green: '#22c55e', yellow: '#eab308', red: '#ef4444', blue: '#3b82f6' };
@@ -428,226 +374,114 @@ const getMarkerIcon = (color) => {
     });
 };
 
-// ЗАГРУЗКА ИЗ ОБЛАЧНОЙ БАЗЫ ДАННЫХ
-async function loadSpringsFromDatabase() {
-    try {
-        const { data, error } = await supabase.from('springs').select('*').order('id', { ascending: true });
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            springs = data;
-        } else {
-            springs = defaultSprings;
-        }
-    } catch (err) {
-        console.warn("База данных недоступна, загрузка локальной копии:", err.message);
-        springs = JSON.parse(localStorage.getItem('kz_springs_db')) || defaultSprings;
-    }
-    renderMapAndList();
+function drawMap(data) {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+    data.forEach(s => {
+        const marker = L.marker([s.lat, s.lng], { icon: getMarkerIcon(s.status) }).addTo(map)
+            .bindPopup(`<b>${s.name}</b><br><span style="color:#a0a0ab">${s.region}</span><br><br><span class="badge bg-${s.status}">${s.statusText}</span>`);
+        markers.push(marker);
+    });
 }
 
-function renderMapAndList() {
-    markersLayer.clearLayers();
-    
-    let filtered = springs.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchQuery) || s.region.toLowerCase().includes(searchQuery);
-        const matchesFilter = currentFilter === 'all' || s.status === currentFilter;
-        return matchesSearch && matchesFilter;
-    });
-
-    filtered.forEach(s => {
-        L.marker([s.lat, s.lng], { icon: getMarkerIcon(s.status) })
-         .bindPopup(`<b>${escapeHTML(s.name)}</b><br><span style="color:#a0a0ab">${escapeHTML(s.region)}</span><br><br><span class="badge bg-${s.status}">${escapeHTML(s.status_text || s.statusText)}</span>`)
-         .addTo(markersLayer);
-    });
-
-    document.getElementById('list').innerHTML = filtered.map(s => `
+function renderList(data) {
+    document.getElementById('list').innerHTML = data.map(s => `
         <div class="card">
             <div class="card-header">
                 <div>
-                    <h3>${escapeHTML(s.name)}</h3>
-                    <p>${escapeHTML(s.type)} • ${escapeHTML(s.region)}</p>
+                    <h3>${s.name}</h3>
+                    <p>${s.type} • ${s.region}</p>
                 </div>
-                <span class="badge bg-${s.status}">${escapeHTML(s.status_text || s.statusText || 'Проверка')}</span>
+                <span class="badge bg-${s.status}">${s.statusText}</span>
             </div>
-            <p><b>Исследователь:</b> ${escapeHTML(s.researcher)}</p>
-            <p><b>Дата:</b> ${escapeHTML(s.date)}</p>
+            <p><b>Исследователь:</b> ${s.researcher}</p>
+            <p><b>Дата анализа:</b> ${s.date}</p>
             
             ${s.lab ? `
             <div class="lab-data">
-                <div><span>pH:</span> <span>${escapeHTML(s.lab.ph)}</span></div>
-                <div><span>Минерализация:</span> <span>${escapeHTML(s.lab.min)}</span></div>
-                <div><span>Электропроводность:</span> <span>${escapeHTML(s.lab.cond)}</span></div>
-                <div><span>Жесткость:</span> <span>${escapeHTML(s.lab.hard)}</span></div>
-                <div><span>Температура:</span> <span>${escapeHTML(s.lab.temp)}</span></div>
-                <div style="border:none; margin-bottom:0;"><span>Примеси:</span> <span>${escapeHTML(s.lab.imp)}</span></div>
+                <div><span>pH:</span> <span>${s.lab.ph}</span></div>
+                <div><span>Минерализация:</span> <span>${s.lab.min}</span></div>
+                <div><span>Электропроводность:</span> <span>${s.lab.cond}</span></div>
+                <div><span>Жесткость:</span> <span>${s.lab.hard}</span></div>
+                <div><span>Температура:</span> <span>${s.lab.temp}</span></div>
+                <div style="border:none; margin-bottom:0;"><span>Примеси:</span> <span>${s.lab.imp}</span></div>
             </div>` : '<p style="color:#eab308; margin-top:15px;">Ожидает лабораторного анализа</p>'}
         </div>
     `).join('');
 }
 
-// --- СОБЫТИЯ И ФИЛЬТРЫ ---
-const handleSearch = debounce((e) => {
-    searchQuery = e.target.value.toLowerCase();
-    renderMapAndList();
-}, 300);
+let currentFilter = 'all';
+let searchQuery = '';
 
-document.getElementById('search').addEventListener('input', handleSearch);
+function updateView() {
+    let filtered = springs.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(searchQuery) || s.region.toLowerCase().includes(searchQuery);
+        const matchesFilter = currentFilter === 'all' || s.status === currentFilter;
+        return matchesSearch && matchesFilter;
+    });
+    drawMap(filtered);
+    renderList(filtered);
+}
+
+document.getElementById('search').addEventListener('input', e => {
+    searchQuery = e.target.value.toLowerCase();
+    updateView();
+});
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         if (e.target.id === 'addSpringBtn') return; 
+
         document.querySelectorAll('.filter-btn:not(#addSpringBtn)').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         currentFilter = e.target.dataset.filter;
-        renderMapAndList();
+        updateView();
     });
 });
 
-// --- ДОБАВЛЕНИЕ РОДНИКА ---
-const addModal = document.getElementById('addModal');
-const addForm = document.getElementById('addSpringForm');
+const modal = document.getElementById('addModal');
+const openBtn = document.getElementById('addSpringBtn');
+const closeBtn = document.getElementById('closeModalBtn');
+const form = document.getElementById('addSpringForm');
 
-document.getElementById('addSpringBtn').addEventListener('click', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        alert("Добавлять новые источники на карту могут только авторизованные исследователи!");
-        document.getElementById('authModal').style.display = 'flex';
-        return;
-    }
-    addModal.style.display = 'flex';
-});
+openBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
+closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
 
-document.getElementById('closeModalBtn').addEventListener('click', () => addModal.style.display = 'none');
-
-addForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const submitBtn = e.target.querySelector('.submit-btn');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Отправка...';
-    submitBtn.disabled = true;
-
-    // ОПТИМИЗАЦИЯ 4: Использование FormData
-    const formData = new FormData(e.target);
-    const lat = parseFloat(formData.get('m_lat'));
-    const lng = parseFloat(formData.get('m_lng'));
+form.addEventListener('submit', (e) => {
+    e.preventDefault(); 
     
     const newSpring = {
-        name: formData.get('m_name'),
-        region: formData.get('m_region'),
-        type: formData.get('m_type'),
-        lat: lat,
-        lng: lng,
+        id: springs.length + 1,
+        name: document.getElementById('m_name').value,
+        region: document.getElementById('m_region').value,
+        type: document.getElementById('m_type').value,
+        lat: parseFloat(document.getElementById('m_lat').value),
+        lng: parseFloat(document.getElementById('m_lng').value),
         status: "yellow", 
-        status_text: "Данные проверяются",
-        researcher: formData.get('m_researcher'),
-        date: new Date().toLocaleDateString('ru-RU')
+        statusText: "Данные проверяются",
+        researcher: document.getElementById('m_researcher').value,
+        date: new Date().toLocaleDateString('ru-RU'),
+        lab: null
     };
 
-    try {
-        // Отправка в облако PostgreSQL
-        const { error } = await supabase.from('springs').insert([newSpring]);
-        if (error) throw error;
-        
-        // Локальное резервное сохранение
-        let localDB = JSON.parse(localStorage.getItem('kz_springs_db')) || defaultSprings;
-        localDB.push({ id: Date.now(), ...newSpring, statusText: "Данные проверяются" });
-        localStorage.setItem('kz_springs_db', JSON.stringify(localDB));
-        
-        alert("Успешно добавлено в глобальную базу данных!");
-        addForm.reset();
-        addModal.style.display = 'none';
-        
-        // Сброс фильтров и обновление
-        document.querySelectorAll('.filter-btn:not(#addSpringBtn)').forEach(b => b.classList.remove('active'));
-        document.querySelector('[data-filter="all"]').classList.add('active');
-        currentFilter = 'all';
-        searchQuery = '';
-        document.getElementById('search').value = '';
-        
-        await loadSpringsFromDatabase();
-        map.setView([lat, lng], 10);
-    } catch (err) {
-        alert("Ошибка при сохранении: " + err.message);
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-// --- АВТОРИЗАЦИЯ SUPABASE ---
-const authModal = document.getElementById('authModal');
-const headerAuthBtn = document.getElementById('headerAuthBtn');
-const authForm = document.getElementById('reactAuthForm');
-const emailSubmitBtn = document.getElementById('emailSubmitBtn');
-
-const updateHeaderState = (user) => {
-    if (user) {
-        headerAuthBtn.textContent = `👤 ${user.email.split('@')[0]}`;
-        headerAuthBtn.style.background = 'var(--status-blue)';
-        headerAuthBtn.style.borderColor = 'transparent';
-    } else {
-        headerAuthBtn.textContent = 'Войти (Google/Telegram)';
-        headerAuthBtn.style.background = 'transparent';
-        headerAuthBtn.style.borderColor = 'var(--border-color)';
-    }
-};
-
-// Слушатель состояния (срабатывает при логине/выходе)
-supabase.auth.onAuthStateChange((event, session) => updateHeaderState(session?.user));
-
-// Первичная проверка при загрузке
-supabase.auth.getSession().then(({ data }) => updateHeaderState(data.session?.user));
-
-headerAuthBtn.addEventListener('click', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-        if (confirm(`Выйти из аккаунта ${session.user.email}?`)) await supabase.auth.signOut();
-    } else {
-        authModal.style.display = 'flex';
-    }
-});
-
-document.getElementById('closeAuthModalBtn').addEventListener('click', () => authModal.style.display = 'none');
-
-// ОПТИМИЗАЦИЯ 5: Try/Catch для работы с сетью
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    emailSubmitBtn.disabled = true;
-    emailSubmitBtn.textContent = 'Отправка...';
+    springs.push(newSpring);
+    localStorage.setItem('kz_springs_db', JSON.stringify(springs));
     
-    const email = document.getElementById('authEmailInput').value;
+    document.querySelectorAll('.filter-btn:not(#addSpringBtn)').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-filter="all"]').classList.add('active');
+    currentFilter = 'all';
+    searchQuery = '';
+    document.getElementById('search').value = '';
     
-    try {
-        const { error } = await supabase.auth.signInWithOtp({ 
-            email, options: { emailRedirectTo: window.location.href }
-        });
-        
-        if (error) throw error;
-        
-        alert(`Успешно! Проверьте вашу почту (${email}) для входа в систему.`);
-        authForm.reset();
-        authModal.style.display = 'none';
-    } catch (err) {
-        alert('Ошибка авторизации: ' + err.message);
-    } finally {
-        emailSubmitBtn.disabled = false;
-        emailSubmitBtn.textContent = 'Войти через Email';
-    }
+    updateView(); 
+    map.setView([newSpring.lat, newSpring.lng], 10);
+    
+    form.reset();
+    modal.style.display = 'none';
 });
 
-document.getElementById('googleAuthBtn').addEventListener('click', async () => {
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
-        if (error) throw error;
-    } catch (err) {
-        alert('Ошибка входа через Google: ' + err.message);
-    }
-});
-
-// Первичный рендер
-loadSpringsFromDatabase();
+updateView();
 </script>
+
 </body>
 </html>
