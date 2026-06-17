@@ -260,13 +260,68 @@
             background: var(--status-blue);
             color: white;
         }
+
+        /* Авторизация: кнопка Google, разделитель, виджет Telegram, чип пользователя */
+        .google-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #ffffff;
+            color: #1f1f1f;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: background 0.2s;
+        }
+        .google-btn:hover { background: #ededed; }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 18px 0;
+        }
+        .auth-divider::before, .auth-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .auth-divider span { padding: 0 10px; }
+
+        #telegramLoginContainer {
+            display: flex;
+            justify-content: center;
+            min-height: 40px;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 5px 14px 5px 5px;
+        }
+        .user-chip img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+        .user-chip span.user-name { font-size: 14px; font-weight: 600; }
+        .user-chip .logout-link { color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Живая Вода РК</h1>
-    <button class="auth-btn">Войти (Google/Telegram)</button>
+    <div id="authContainer">
+        <button class="auth-btn" id="authBtn">Войти (Google/Telegram)</button>
+    </div>
 </header>
 
 <main>
@@ -323,8 +378,35 @@
             </form>
         </div>
     </div>
+
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Вход в проект</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px;">Войдите, чтобы добавленные вами родники сохранялись под вашим именем</p>
+
+            <button id="googleSignInBtn" class="google-btn">
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                    <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                </svg>
+                Войти через Google
+            </button>
+
+            <div class="auth-divider"><span>или</span></div>
+
+            <div id="telegramLoginContainer"></div>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 20px;">
+                <button type="button" id="closeAuthModalBtn" class="cancel-btn">Закрыть</button>
+            </div>
+        </div>
+    </div>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -481,6 +563,144 @@ form.addEventListener('submit', (e) => {
 });
 
 updateView();
+
+// ============================================================
+// АВТОРИЗАЦИЯ (Google через Firebase Auth + Telegram Login Widget)
+// ============================================================
+// Раньше кнопка "Войти (Google/Telegram)" в шапке не имела ни одного
+// обработчика событий — клик по ней не делал вообще ничего. Ниже добавлены:
+// модальное окно входа, кнопка Google (через Firebase Auth) и виджет
+// Telegram Login.
+
+// 1) Вставьте сюда конфиг ВАШЕГО проекта Firebase:
+//    https://console.firebase.google.com -> Project settings ->
+//    "Your apps" -> Web app (значок </>) -> SDK setup and configuration.
+//    Также включите Google в Authentication -> Sign-in method и добавьте
+//    свой домен (yedil-amir.github.io) в Authentication -> Settings ->
+//    Authorized domains — иначе вход через Google вернёт ошибку.
+const firebaseConfig = {
+    apiKey: "ВАШ_API_KEY",
+    authDomain: "ваш-проект.firebaseapp.com",
+    projectId: "ваш-проект",
+    appId: "ВАШ_APP_ID"
+};
+
+let auth = null;
+try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+} catch (e) {
+    console.warn('Firebase не инициализирован — проверьте firebaseConfig.', e);
+}
+
+// 2) Имя вашего Telegram-бота (без @), созданного через @BotFather.
+//    После создания бота отправьте ему команду /setdomain и укажите
+//    свой домен — без этого виджет не будет работать на вашем сайте.
+const TELEGRAM_BOT_USERNAME = "ИМЯ_ВАШЕГО_БОТА";
+
+const authModal = document.getElementById('authModal');
+const authContainer = document.getElementById('authContainer');
+
+function openAuthModal() { authModal.style.display = 'flex'; }
+function closeAuthModal() { authModal.style.display = 'none'; }
+document.getElementById('closeAuthModalBtn').addEventListener('click', closeAuthModal);
+
+function getCurrentUser() {
+    const raw = localStorage.getItem('kz_current_user');
+    return raw ? JSON.parse(raw) : null;
+}
+
+function setCurrentUser(user) {
+    localStorage.setItem('kz_current_user', JSON.stringify(user));
+    renderAuthUI(user);
+}
+
+function logout() {
+    if (auth) auth.signOut().catch(() => {});
+    localStorage.removeItem('kz_current_user');
+    renderAuthUI(null);
+}
+
+// Перерисовывает область шапки: кнопка входа ИЛИ чип "аватар + имя + выйти"
+function renderAuthUI(user) {
+    if (user) {
+        authContainer.innerHTML = `
+            <div class="user-chip">
+                <img src="${user.photoURL || ('https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(user.name))}" alt="">
+                <span class="user-name">${user.name}</span>
+                <span class="logout-link" id="logoutBtn">Выйти</span>
+            </div>
+        `;
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+    } else {
+        authContainer.innerHTML = `<button class="auth-btn" id="authBtn">Войти (Google/Telegram)</button>`;
+        document.getElementById('authBtn').addEventListener('click', openAuthModal);
+    }
+}
+
+// ---- Вход через Google ----
+document.getElementById('googleSignInBtn').addEventListener('click', () => {
+    if (!auth) {
+        alert('Вход через Google пока не настроен: добавьте firebaseConfig в коде сайта.');
+        return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .then(result => {
+            const u = result.user;
+            setCurrentUser({ provider: 'google', name: u.displayName, photoURL: u.photoURL, email: u.email, uid: u.uid });
+            closeAuthModal();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Не удалось войти через Google: ' + err.message);
+        });
+});
+
+// ---- Вход через Telegram ----
+// Виджет создаётся динамически и подставляется в контейнер модального окна
+(function loadTelegramWidget() {
+    const widgetScript = document.createElement('script');
+    widgetScript.src = 'https://telegram.org/js/telegram-widget.js?22';
+    widgetScript.setAttribute('data-telegram-login', TELEGRAM_BOT_USERNAME);
+    widgetScript.setAttribute('data-size', 'large');
+    widgetScript.setAttribute('data-radius', '12');
+    widgetScript.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    widgetScript.setAttribute('data-request-access', 'write');
+    document.getElementById('telegramLoginContainer').appendChild(widgetScript);
+})();
+
+// Telegram вызывает эту глобальную функцию после успешного входа пользователя.
+// ВАЖНО: сайт статический (без сервера), поэтому поле hash, которое Telegram
+// возвращает вместе с данными пользователя, здесь НЕ проверяется
+// криптографически — для этого нужен секретный токен бота, а его нельзя
+// хранить в браузерном коде. Для учебного/некоммерческого проекта это
+// обычно приемлемо, но если важна защита от подделки входа, проверку hash
+// нужно перенести на небольшую серверную функцию (Cloudflare Worker,
+// Firebase Cloud Function и т.п.).
+window.onTelegramAuth = function (user) {
+    setCurrentUser({
+        provider: 'telegram',
+        name: [user.first_name, user.last_name].filter(Boolean).join(' '),
+        photoURL: user.photo_url,
+        username: user.username,
+        uid: 'tg_' + user.id
+    });
+    closeAuthModal();
+};
+
+// Восстанавливаем сессию при загрузке страницы (из localStorage)
+renderAuthUI(getCurrentUser());
+
+// Если пользователь уже был залогинен через Google ранее в этом браузере,
+// Firebase сам восстановит сессию — подхватываем её тоже.
+if (auth) {
+    auth.onAuthStateChanged(u => {
+        if (u && !getCurrentUser()) {
+            setCurrentUser({ provider: 'google', name: u.displayName, photoURL: u.photoURL, email: u.email, uid: u.uid });
+        }
+    });
+}
 </script>
 
 </body>
